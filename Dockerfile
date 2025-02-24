@@ -3,6 +3,7 @@ FROM nvcr.io/nvidia/deepstream:7.1-gc-triton-devel
 
 # Set working directory
 WORKDIR /app
+COPY . .
 
 # Run the script to build Python bindings
 RUN /bin/bash -c "/opt/nvidia/deepstream/deepstream-7.1/user_deepstream_python_apps_install.sh --build-bindings"

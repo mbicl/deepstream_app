@@ -1,3 +1,22 @@
+#!/usr/bin/env python3
+
+################################################################################
+# SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
+
 import sys
 sys.path.append('../')
 from pathlib import Path
@@ -25,10 +44,9 @@ perf_data = None
 measure_latency = False
 
 MAX_DISPLAY_LEN=64
-PGIE_CLASS_ID_VEHICLE = 0
-PGIE_CLASS_ID_BICYCLE = 1
-PGIE_CLASS_ID_PERSON = 2
-PGIE_CLASS_ID_ROADSIGN = 3
+PGIE_CLASS_ID_PERSON = 0
+PGIE_CLASS_ID_BAG = 1
+PGIE_CLASS_ID_FACE = 2
 MUXER_OUTPUT_WIDTH=1920
 MUXER_OUTPUT_HEIGHT=1080
 MUXER_BATCH_TIMEOUT_USEC = 33000
@@ -37,7 +55,7 @@ TILED_OUTPUT_HEIGHT=720
 GST_CAPS_FEATURES_NVMM="memory:NVMM"
 OSD_PROCESS_MODE= 0
 OSD_DISPLAY_TEXT= 1
-pgie_classes_str= ["Vehicle", "TwoWheeler", "Person","RoadSign"]
+pgie_classes_str= ["Person", "Bag", "Face"]
 
 # pgie_src_pad_buffer_probe  will extract metadata received on tiler sink pad
 # and update params for drawing rectangle, object information etc.
@@ -79,10 +97,9 @@ def pgie_src_pad_buffer_probe(pad,info,u_data):
         l_obj=frame_meta.obj_meta_list
         num_rects = frame_meta.num_obj_meta
         obj_counter = {
-        PGIE_CLASS_ID_VEHICLE:0,
         PGIE_CLASS_ID_PERSON:0,
-        PGIE_CLASS_ID_BICYCLE:0,
-        PGIE_CLASS_ID_ROADSIGN:0
+        PGIE_CLASS_ID_BAG:0,
+        PGIE_CLASS_ID_FACE:0
         }
         while l_obj is not None:
             try: 
@@ -96,7 +113,7 @@ def pgie_src_pad_buffer_probe(pad,info,u_data):
             except StopIteration:
                 break
         if not silent:
-            print("Frame Number=", frame_number, "Number of Objects=",num_rects,"Vehicle_count=",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count=",obj_counter[PGIE_CLASS_ID_PERSON])
+            print("Frame Number=", frame_number, "Number of Objects=",num_rects,"Bag_count=",obj_counter[PGIE_CLASS_ID_BAG],"Person_count=",obj_counter[PGIE_CLASS_ID_PERSON])
 
         # Update frame rate through this probe
         stream_index = "stream{0}".format(frame_meta.pad_index)
@@ -240,15 +257,11 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     queue3=Gst.ElementFactory.make("queue","queue3")
     queue4=Gst.ElementFactory.make("queue","queue4")
     queue5=Gst.ElementFactory.make("queue","queue5")
-    queue6=Gst.ElementFactory.make("queue","queue6")
-    queue7=Gst.ElementFactory.make("queue","queue7")
     pipeline.add(queue1)
     pipeline.add(queue2)
     pipeline.add(queue3)
     pipeline.add(queue4)
     pipeline.add(queue5)
-    pipeline.add(queue6)
-    pipeline.add(queue7)
 
     nvdslogger = None
 
@@ -291,36 +304,28 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
             # Set nvbuf-memory-type=2 for x86 for file-loop (nvurisrcbin case)
             streammux.set_property('nvbuf-memory-type', 2)
 
-    capsfilter = Gst.ElementFactory.make("capsfilter", "caps")
-    capsfilter.set_property("caps", Gst.Caps.from_string("video/x-raw,format=NV12"))
-
     if no_display:
         print("Creating Fakesink \n")
         sink = Gst.ElementFactory.make("fakesink", "fakesink")
         sink.set_property('enable-last-sample', 0)
-        sink.set_property('sync', 0)
+        # sink.set_property('sync', 0)
     else:
-        print("Creating Filesink \n")
-        sink = Gst.ElementFactory.make("filesink","file-sink")
-        if not sink:
-            sys.stderr.write(" Unable to create filesink \n")
-        sink.set_property("location","output.mp4")
-        # sink.set_property("sync",False)
-
-        # if platform_info.is_integrated_gpu():
-        #     print("Creating nv3dsink \n")
-        #     sink = Gst.ElementFactory.make("nv3dsink", "nv3d-sink")
-        #     if not sink:
-        #         sys.stderr.write(" Unable to create nv3dsink \n")
-        # else:
-        #     if platform_info.is_platform_aarch64():
-        #         print("Creating nv3dsink \n")
-        #         sink = Gst.ElementFactory.make("nv3dsink", "nv3d-sink")
-        #     else:
-        #         print("Creating EGLSink \n")
-        #         sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
-        #     if not sink:
-        #         sys.stderr.write(" Unable to create egl sink \n")
+        # sink = Gst.ElementFactory.make("filesink", "filesink")
+        # sink.set_property('location','output.mp4')
+        if platform_info.is_integrated_gpu():
+            print("Creating nv3dsink \n")
+            sink = Gst.ElementFactory.make("nv3dsink", "nv3d-sink")
+            if not sink:
+                sys.stderr.write(" Unable to create nv3dsink \n")
+        else:
+            if platform_info.is_platform_aarch64():
+                print("Creating nv3dsink \n")
+                sink = Gst.ElementFactory.make("nv3dsink", "nv3d-sink")
+            else:
+                print("Creating EGLSink \n")
+                sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
+            if not sink:
+                sys.stderr.write(" Unable to create egl sink \n")
 
     if not sink:
         sys.stderr.write(" Unable to create sink element \n")
@@ -364,8 +369,6 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(nvosd)
-    # pipeline.add(videoconvert)
-    pipeline.add(capsfilter)
     pipeline.add(sink)
 
     print("Linking elements in the Pipeline \n")
@@ -382,11 +385,7 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     nvvidconv.link(queue4)
     queue4.link(nvosd)
     nvosd.link(queue5)
-    # queue5.link(videoconvert)
-    # videoconvert.link(queue6)
-    queue5.link(capsfilter)
-    capsfilter.link(queue7)
-    queue7.link(sink)   
+    queue5.link(sink)   
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GLib.MainLoop()
@@ -515,4 +514,3 @@ def parse_args():
 if __name__ == '__main__':
     stream_paths, pgie, config, disable_probe = parse_args()
     sys.exit(main(stream_paths, pgie, config, disable_probe))
-
