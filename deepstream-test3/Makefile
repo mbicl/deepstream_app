@@ -15,3 +15,6 @@ nd:
 
 nds:
 	python3 deepstream_test_3.py -i file:///app/video.mp4 --pgie nvinfer -c config_infer_primary_peoplenet.txt --no-display --silent
+
+grpc:
+	python3 deepstream_test_3.py -i file:///app/video.mp4 --pgie nvinferserver-grpc -c config_triton_grpc_infer_primary_peoplenet.txt
