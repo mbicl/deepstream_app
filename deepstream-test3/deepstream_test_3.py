@@ -227,7 +227,7 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
 
     if not pipeline:
         sys.stderr.write(" Unable to create Pipeline \n")
-    print("Creating streamux \n ")
+    print("Creating streammux \n ")
 
     # Create nvstreammux instance to form batches from one or more sources.
     streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
@@ -238,13 +238,14 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     for i in range(number_sources):
         print("Creating source_bin ",i," \n ")
         uri_name=args[i]
+        print(f"uri for source {i}: {uri_name}\n")
         if uri_name.find("rtsp://") == 0 :
             is_live = True
         source_bin=create_source_bin(i, uri_name)
         if not source_bin:
             sys.stderr.write("Unable to create source bin \n")
         pipeline.add(source_bin)
-        padname="sink_%u" %i
+        padname=f"sink_{i}"
         sinkpad= streammux.request_pad_simple(padname) 
         if not sinkpad:
             sys.stderr.write("Unable to create sink pad bin \n")
@@ -338,6 +339,7 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', number_sources)
     streammux.set_property('batched-push-timeout', MUXER_BATCH_TIMEOUT_USEC)
+    
     if requested_pgie == "nvinferserver" and config != None:
         pgie.set_property('config-file-path', config)
     elif requested_pgie == "nvinferserver-grpc" and config != None:
@@ -347,6 +349,9 @@ def main(args, requested_pgie=None, config=None, disable_probe=False):
     else:
         pgie.set_property('config-file-path', "dstest3_pgie_config.txt")
     pgie_batch_size=pgie.get_property("batch-size")
+    max_batch_size = pgie.get_property("unique-id")
+    print(max_batch_size)
+
     if(pgie_batch_size != number_sources):
         print("WARNING: Overriding infer-config batch-size",pgie_batch_size," with number of sources ", number_sources," \n")
         pgie.set_property("batch-size",number_sources)

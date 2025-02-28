@@ -9,6 +9,7 @@ docker run --runtime=nvidia --gpus all --detach --interactive --tty \
   --env DISPLAY=$DISPLAY \
   --volume /tmp/.X11-unix:/tmp/.X11-unix \
   --name deepstream_app_display \
+  -p 9000:9000 \
   --volume "$(pwd)":/app \
   --workdir /app \
   deepstream_app:latest \

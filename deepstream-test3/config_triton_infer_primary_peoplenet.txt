@@ -31,7 +31,7 @@ infer_config {
       model_name: "peoplenet"
       version: -1
       model_repo {
-        root: "/opt/nvidia/deepstream/deepstream/samples/triton_model_repo"
+        root: "/app/model_repository"
         strict_model_config: true
       }
     }
@@ -51,9 +51,9 @@ infer_config {
   }
 
   postprocess {
-    labelfile_path: "/opt/nvidia/deepstream/deepstream/samples/configs/tao_pretrained_models/labels_peoplenet.txt"
+    labelfile_path: "/app/peoplenet/labels.txt"
     detection {
-      num_detected_classes: 4
+      num_detected_classes: 3
       per_class_params {
         key: 0
         value { pre_threshold: 0.4 }

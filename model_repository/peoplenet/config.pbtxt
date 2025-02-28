@@ -1,0 +1,30 @@
+name: "peoplenet"
+platform: "onnxruntime_onnx"
+max_batch_size: 1
+input [
+  {
+    name: "input_1:0"
+    data_type: TYPE_FP32
+    dims: [ 3, 544, 960 ]
+  }
+]
+output [
+  {
+    name: "output_bbox/BiasAdd:0"
+    data_type: TYPE_FP32
+    dims: [ 12, 34, 60 ]
+  },
+  {
+    name: "output_cov/Sigmoid:0"
+    data_type: TYPE_FP32
+    dims: [ 3, 34, 60 ]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_GPU
+    count: 1
+    gpus: 0
+  }
+]

@@ -18,7 +18,7 @@
 [property]
 gpu-id=0
 net-scale-factor=0.0039215697906911373
-#tlt-model-key=tlt_encode
+tlt-model-key=tlt_encode
 onnx-file=../peoplenet/resnet34_peoplenet_int8.onnx
 labelfile-path=../peoplenet/labels.txt
 model-engine-file=../peoplenet/resnet34_peoplenet_int8.onnx_b2_gpu0_int8.engine
